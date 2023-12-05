@@ -70,6 +70,9 @@
 
 				&.equal {
 					background-color: rgb(60 247 91 / 0.3);
+					&.falsy {
+						background-color: rgb(247 247 60 / 0.3);
+					}
 				}
 
 				&.not-equal {
@@ -85,17 +88,15 @@
 
 				@media (width < 400em) {
 					> div {
-						&:first-child {
-							display: grid;
-							place-items: center;
-						}
+						display: grid;
+						place-items: center;
 					}
 				}
 			}
 
 			.results {
 				display: grid;
-				grid-template-columns: 1fr 1fr;
+				grid-template-columns: 1fr 12ch;
 
 				> div {
 					display: grid;
@@ -107,9 +108,17 @@
 						padding: 0.5rem 0.75rem;
 					}
 
-					&:first-child {
+					&:not(:last-child) {
 						border-bottom: 1px dashed var(--border-color);
-						background-color: rgb(255 255 255 / 0.1);
+					}
+
+					background-color: rgb(240 240 240 / 0.1);
+
+					&:nth-child(4n + 1) {
+						background-color: rgb(32 32 32 / 0.1);
+					}
+					&:nth-child(4n + 2) {
+						background-color: rgb(32 32 32 / 0.1);
 					}
 
 					:first-child {
@@ -131,6 +140,11 @@
 					font-weight: 700;
 				}
 			}
+
+			.results span {
+				font-size: 0.75rem;
+				font-weight: 700;
+			}
 		</style>
 	</head>
 	<body>
@@ -138,13 +152,13 @@
 			<h1>JavaScript Shenanigans</h1>
 			<h3>Optional Chaining Operator</h3>
 			<p>
-				Question: Are <code>foo && foo.bar</code> and
-				<code>foo?.bar</code> equivalent?
+				Question: Are <code>input && input.x</code> and
+				<code>input?.x</code> equivalent?
 			</p>
 			<p>
-				Answer: Sometimes! If the left side is nullish (<code>null</code> or
-				<code>undefined</code>), it will short-circuit and evaluate to
-				<code>undefined</code>.
+				Answer: Sometimes &ndash; if the left side is nullish (<code>null</code>
+				or <code>undefined</code>), it will short-circuit and evaluate to
+				<code>undefined</code>!
 			</p>
 			<p></p>
 			<div id="answer-grid">
@@ -156,29 +170,43 @@
 		</div>
 		<script>
 			const values = [];
-			const addValue = (value, falsy = true, nullish = false) =>
-				values.push({ value, falsy, nullish });
+			const addValue = (input, options = {}) => {
+				values.push({
+					input,
+					exp1: options.exp1 ?? 'input && input.x',
+					exp2: options.exp2 ?? 'input?.x',
+				});
+			};
 
-			addValue({ bar: 'yay' }, false);
-			addValue(null, true, true);
-			addValue(undefined, true, true);
-			addValue(false);
-			addValue(0);
-			addValue('');
-			addValue([]);
+			addValue({ x: 'yay' });
 			addValue({});
+			addValue([], {
+				exp1: 'input && input[2]',
+				exp2: 'input?.[2]',
+			});
+			addValue('', {
+				exp1: 'input && input.length',
+				exp2: 'input?.length',
+			});
+			addValue(false, {
+				exp1: 'input && input.toString()',
+				exp2: 'input?.toString()',
+			});
+			addValue(0, {
+				exp1: 'input && input.toFixed(2)',
+				exp2: 'input?.toFixed(2)',
+			});
+			addValue(null);
+			addValue(undefined);
 
 			const gridElem = document.getElementById('answer-grid');
 
 			const toString = (value) =>
 				value === undefined ? 'undefined' : JSON.stringify(value);
 
-			values.forEach(({ value, falsy, nullish }) => {
-				const result1 = value && value.bar;
-				const result2 = value?.bar;
-
-				const exp1 = 'foo && foo.bar';
-				const exp2 = 'foo?.bar';
+			values.forEach(({ input, falsy, nullish, exp1, exp2 }) => {
+				const result1 = eval(exp1);
+				const result2 = eval(exp2);
 
 				const rowElem = document.createElement('div');
 				rowElem.classList.add('row');
@@ -188,16 +216,35 @@
 					rowElem.classList.add('not-equal');
 				}
 
-				const valueElem = document.createElement('div');
-				valueElem.classList.add('value');
+				const inputElem = document.createElement('div');
+				inputElem.classList.add('input');
 
-				const valueCodeElem = document.createElement('code');
-				valueCodeElem.textContent = toString(value);
-				valueElem.append(valueCodeElem);
-				rowElem.append(valueElem);
+				const inputCodeElem = document.createElement('code');
+				inputCodeElem.textContent = toString(input);
+				inputElem.append(inputCodeElem);
+				rowElem.append(inputElem);
 
 				const resultsElem = document.createElement('div');
 				resultsElem.classList.add('results');
+
+				const resultTruthyElem = document.createElement('div');
+				const expTruthyElem = document.createElement('span');
+				expTruthyElem.textContent = 'Truthy/Falsy';
+				const resultTruthyCodeElem = document.createElement('span');
+				resultTruthyCodeElem.textContent = Boolean(input) ? 'Truthy' : 'Falsy';
+				if (!Boolean(input)) rowElem.classList.add('falsy');
+				resultTruthyCodeElem.classList.add('output');
+				resultTruthyElem.append(expTruthyElem, resultTruthyCodeElem);
+				resultsElem.append(resultTruthyElem);
+
+				const resultNullishElem = document.createElement('div');
+				const expNullishElem = document.createElement('span');
+				expNullishElem.textContent = 'Nullish?';
+				const resultNullishCodeElem = document.createElement('span');
+				resultNullishCodeElem.textContent = input == null ? 'Nullish' : '-';
+				resultNullishCodeElem.classList.add('output');
+				resultNullishElem.append(expNullishElem, resultNullishCodeElem);
+				resultsElem.append(resultNullishElem);
 
 				const result1Elem = document.createElement('div');
 				const exp1Elem = document.createElement('code');
