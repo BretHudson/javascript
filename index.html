@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html lang="en">
+	<head>
+		<meta charset="UTF-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+		<title>JavaScript Shenanigans</title>
+		<meta name="color-scheme" content="dark light" />
+		<style>
+			*,
+			*::before,
+			*::after {
+				box-sizing: border-box;
+			}
+
+			:root {
+				@media (prefers-color-scheme: light) {
+					--color-fg: #000;
+					--color-fg-accent: #444;
+					--color-bg: #fff;
+				}
+
+				@media (prefers-color-scheme: dark) {
+					--color-fg: #fff;
+					--color-fg-accent: #bbb;
+					--color-bg: #000;
+				}
+
+				--dbp-red: rgb(255, 28, 36);
+				--dbp-red-raw: 255 28 36;
+				--dbp-blue: #3cacf7;
+				--dbp-blue-raw: 60 172 247;
+				--dbp-orange: #d66e11;
+				--dbp-orange-raw: 214 110 17;
+				--dbp-grey: #c2c1c2;
+			}
+
+			body {
+				font-family: sans-serif;
+				text-align: center;
+			}
+
+			#wrapper {
+				margin-inline: auto;
+				max-width: 50ch;
+			}
+
+			p {
+				text-wrap: balance;
+			}
+
+			#answer-grid {
+				text-align: left;
+				margin-top: 2rem;
+				margin-inline: auto;
+				display: grid;
+				grid-template-columns: repeat(3, 1fr);
+				border: 2px solid var(--color-fg);
+
+				@media (width < 400em) {
+					grid-template-columns: auto 1fr;
+				}
+			}
+
+			.row {
+				--border-color: var(--color-fg-accent);
+				display: grid;
+				grid-template-columns: subgrid;
+				grid-column: 1 / -1;
+				border-bottom: 1px solid var(--border-color);
+
+				&.equal {
+					background-color: rgb(60 247 91 / 0.3);
+				}
+
+				&.not-equal {
+					background-color: rgb(247 60 60 / 0.3);
+				}
+
+				> div {
+					&:not(:last-child) {
+						border-right: 1px solid var(--border-color);
+						padding: 0.5rem 0.75rem;
+					}
+				}
+
+				@media (width < 400em) {
+					> div {
+						&:first-child {
+							display: grid;
+							place-items: center;
+						}
+					}
+				}
+			}
+
+			.results {
+				display: grid;
+				grid-template-columns: 1fr 1fr;
+
+				> div {
+					display: grid;
+					grid-column: 1 / -1;
+					grid-template-columns: subgrid;
+					text-align: center;
+
+					> * {
+						padding: 0.5rem 0.75rem;
+					}
+
+					&:first-child {
+						border-bottom: 1px dashed var(--border-color);
+						background-color: rgb(255 255 255 / 0.1);
+					}
+
+					:first-child {
+						border-right: 1px dashed var(--border-color);
+					}
+				}
+
+				.output {
+					text-align: center;
+				}
+			}
+
+			#header {
+				background-color: rgb(60 172 247 / 0.6);
+				border-bottom: 2px solid var(--color-fg);
+
+				> div {
+					--border-color: transparent;
+					font-weight: 700;
+				}
+			}
+		</style>
+	</head>
+	<body>
+		<div id="wrapper">
+			<h1>JavaScript Shenanigans</h1>
+			<h3>Optional Chaining Operator</h3>
+			<p>
+				Question: Are <code>foo && foo.bar</code> and
+				<code>foo?.bar</code> equivalent?
+			</p>
+			<p>
+				Answer: Sometimes! If the left side is nullish (<code>null</code> or
+				<code>undefined</code>), it will short-circuit and evaluate to
+				<code>undefined</code>.
+			</p>
+			<p></p>
+			<div id="answer-grid">
+				<div id="header" class="row">
+					<div>Input</div>
+					<div>Results</div>
+				</div>
+			</div>
+		</div>
+		<script>
+			const values = [];
+			const addValue = (value, falsy = true, nullish = false) =>
+				values.push({ value, falsy, nullish });
+
+			addValue({ bar: 'yay' }, false);
+			addValue(null, true, true);
+			addValue(undefined, true, true);
+			addValue(false);
+			addValue(0);
+			addValue('');
+			addValue([]);
+			addValue({});
+
+			const gridElem = document.getElementById('answer-grid');
+
+			const toString = (value) =>
+				value === undefined ? 'undefined' : JSON.stringify(value);
+
+			values.forEach(({ value, falsy, nullish }) => {
+				const result1 = value && value.bar;
+				const result2 = value?.bar;
+
+				const exp1 = 'foo && foo.bar';
+				const exp2 = 'foo?.bar';
+
+				const rowElem = document.createElement('div');
+				rowElem.classList.add('row');
+				if (result1 === result2) {
+					rowElem.classList.add('equal');
+				} else {
+					rowElem.classList.add('not-equal');
+				}
+
+				const valueElem = document.createElement('div');
+				valueElem.classList.add('value');
+
+				const valueCodeElem = document.createElement('code');
+				valueCodeElem.textContent = toString(value);
+				valueElem.append(valueCodeElem);
+				rowElem.append(valueElem);
+
+				const resultsElem = document.createElement('div');
+				resultsElem.classList.add('results');
+
+				const result1Elem = document.createElement('div');
+				const exp1Elem = document.createElement('code');
+				exp1Elem.textContent = exp1;
+				const result1CodeElem = document.createElement('code');
+				result1CodeElem.textContent = toString(result1);
+				result1CodeElem.classList.add('output');
+				result1Elem.append(exp1Elem, result1CodeElem);
+				resultsElem.append(result1Elem);
+
+				const result2Elem = document.createElement('div');
+				const exp2Elem = document.createElement('code');
+				exp2Elem.textContent = exp2;
+				const result2CodeElem = document.createElement('code');
+				result2CodeElem.textContent = toString(result2);
+				result2CodeElem.classList.add('output');
+				result2Elem.append(exp2Elem, result2CodeElem);
+				resultsElem.append(result2Elem);
+
+				rowElem.append(resultsElem);
+
+				gridElem.append(rowElem);
+			});
+		</script>
+	</body>
+</html>
